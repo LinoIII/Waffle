@@ -1,0 +1,281 @@
+WAF-FLE ChangeLog
+
+Version 0.7.1: April, 18 2024
+-------------
+Fixed Bugs:
+- Fixed Phase A pattern for ModSecurity 2.9.4+
+- Fixed Phase B pattern for ModSecurity 2.9.4+
+- Fixed PHP bad check for variable value
+
+Improvements:
+
+
+New Feature:
+- Added HTTP/2.0 pattern
+
+Version 0.7.0: April, 03 2024
+-------------
+Fixed Bugs:
+
+Improvements:
+- Compatible with PHP 8.x
+- Removed APC references, now it supports only APCu
+- Updated SQL queries
+
+New Feature:
+- When creating a new user, it is possible to define if it is an admin
+  or not. Not-admin users can't access the Management section.
+- In Events action over time graph, it is now possible to zoom in and
+  zoom out.  
+
+Version 0.6.4: Jul, 25 2014
+-------------
+Fixed Bugs:
+- Issue #39 (google code) fixed to allow character [ and ] in the msg 
+  event log. While not usual, can happen. Other fields were also 
+  affected.
+- Lack of output encoding in some filter fields (filter dialog and 
+  current filter), when a bogus hostname present in event, cause 
+  improper html rendering. Thanks to Marcus Semblano to report and 
+  supply with path;
+- In some circunstances the filter dialog are unable to show web 
+  hostnames (ie. when more that 2000 entries), this is a 
+  limitation/protection of browsers. Now the hostname was changed from a 
+  combo-box, to a text input with autocomplete powered by a Ajax
+  interface, that brings hostnames when you type it on hostname field. 
+  This fixes issue #15 on github. Thanks to Juraj Sakala for report and
+  discuss it;
+- Issue #7 (github) were "PCRE limits exceeded" start to be handled 
+  properly with attribution of a virtual rule id configurable in 
+  config.php (default in 99999), with patch of Juraj Sakala;
+- Session is now enforced correctly when an AJAX operation is called.
+- Custom Tags ID's changed to start in 1000, to avoid conflict with 
+  native tags (thanks to Juraj Sakala);
+- Typo corrected in mlog2waffle.conf (thanks to Juraj Sakala);
+- Typo corrected in event feeder wizard;
+- Text revised in event feeder wizard;
+- Better URL handling in request, patch from Juraj Sakala;
+- Typo correction in functions.php, patch from Juraj Sakala;
+- Bad dashboard page formating (Issue #37), patch from Juraj Sakala;
+- This change addresses the issue #43 (at Google Code), it reflects 
+  problem with the modsec index file line parsing, that has an empty or 
+  malformed Host header. Patch from Juraj Sakala;
+- Fixed issue #43, when processing filter with "not tag" generate an 
+  error.
+- Issue #45, unescaped output on TopRules chart, make chart unusable 
+  when a special character is in rule description. Thanks to Ibere Tizio, 
+  by report and propose a fix.
+- Issue #47, typo in redirect definition on waf-fle.conf (apache config 
+  file) for WAF-FLE;
+- Issue #47, error in IP address validation function of Add Sensor in 
+  management interface;
+- Fixes github issue #13, processing of client ip range defined by a 
+  netmask;
+- Issue #18, fixes regression on client IP filter with no netmask, 
+  thanks to Juraj Sakala for the patch;
+- Added parsing and filter to events with "pause" action;
+- Change the management menu behavior, to address a performance impact 
+  described by Juraj Sakala (in issue #14 on GitHub). A temporary denial 
+  of service happens while database events are counted for get sensor 
+  information. Now the user can change (on config.php and in runtime) if 
+  Sensor Info will be loaded or not. Database schema change to fix this, 
+  but will change in update process only on next release, if you want to 
+  change now, access your MySQL and use the command below (this can need 
+  some time and disk space):      
+     # use waffle;
+     # ALTER TABLE `waffle`.`events` ADD INDEX `sensor3` (`sensor_id`);
+
+Improvements:
+- mlog2waffle requirements better clarified in their README, and now is 
+  possible to use it with old version of libwww-perl, but no self-signed 
+  certificate in that case;
+- Better error message in case of database error;
+- mlog2waffle now has a crontab script;
+- You can disable/enable error log in mlog2waffle in mlog2waffle.conf;
+- waf-fle.conf minor text adjustment;
+- Corrected push-mlogc.sh template in Event Feeder Wizard;
+- Filter for preserved events added. Thanks to Juraj Sakala;
+- Better event handling in controller, code cleanup, including broken 
+  log format of libinjetion, thanks to Juraj Sakala for propose code and 
+  show the libinject problem in issue #17;
+- Event details are reordered to put "Rule Message" first, event details 
+  after;
+- Some grammar correction. Thanks to Cliton Nichols;
+- Now accept events sent by mod_security compiled/patched by Atomic 
+  Turtle to change label "Producer" to "WAF". Issue #22 and #48;
+- mlog2waffle now support event index created by mod_security 
+  compiled/patched by Atomic Turtle;
+- Better session handling: The session are regenerated when a sucessful 
+  login occour, and after 10 times the SESSION_TIMEOUT, make session 
+  more robust against session hijack/fixation.
+- Session expiration are now better handled, timeout happen between the
+  finish of a page processing and the next access;
+- Event list is better sorted now, first by event_id, later by timestamp
+- Better error message when the user are trying to setup WAF-FLE and 
+  have not defined the $SETUP variable in config.php.
+- Improved APCu support, as PHP version 5.5 now need to use APCu instead
+  of deprecated APC, some adjust in code was done with better 
+  information in management/info about which module is load.
+
+
+Version 0.6.3: Jan, 30 2014
+-------------
+Bug: mlog2waffle in batch mode dont exit after finish. Fixed.
+Bug: fixed mlog2waffle.ubuntu init script to allow start as a daemon in 
+     batch mode.
+Bug: Fixed issues #21 and #25, when an incomplete request is rejected by
+     waf-fle's  database schema, producing an error 500;
+Bug: Fixed filter dialog showed in login page when accessed with a valid 
+     session
+Bug: Fixed issue #20, setup now handle database privilege when mysql and 
+     waf-fle are in diferent hosts. Now you can specify the client 
+     hostname/address or even a wildcard on setup.
+Bug: Fixed issue #26, where the timming filters are not filtering 
+     properly. 
+Bug: Fixed issue #28, delete events by filter hit a error 500, when any 
+     filter beyond date range is used.
+Improve: Event delete limit ($deleteLimit) and delete wait ($deleteWait)
+         is now parameters in config.php, as sugested in issue #31. This 
+         parameters also affect Mark as False Positive events of Current 
+         Filter.
+Improve: when used with SSL mlog2waffle now allow to define if 
+         certificate need to be validated or not. Needed when a self-
+         signed certificate is used. Edit mlog2waffle.conf to configure.
+Improve: Apache authorization config ajusted to be compatible with 
+         version 2.4+, see waf-fle.conf comments for details.
+Improve: Give more enfasis on success message on setup (instructing to 
+         edit config.php when finished).
+Improve: ChangeLog reformated
+
+Version 0.6.1: Apr, 23 2013
+-------------
+Bug: Solve a issue with no standard timezones, like used in Venezuela.
+
+
+Version 0.6.0: Apr, 23 2013
+-------------
+Bug: Issue #18 fixed, mysql user permissions corrected in README file, 
+     thanks for Reinhard Sojka for report. 
+Bug: Fixed the template for mlogc usage, when used Event Feeder Wizard.
+Improve: Better handling of missing config.php.
+Bug: Issue #15 fixed, delete event in event detail don't work, thanks 
+     for Juraj Sakala for report. 
+Bug: Issue #14 fixed, when an events is deleted the full event detail 
+     was not deleted, thanks for Juraj Sakala for report. 
+Bug: Issue #11 fixed, improper use of XFF header when undesired, thanks 
+     for Juraj Sakala for report.
+Bug: Issue #10 fixed, bad header parsing when receiving events, thanks 
+     for Juraj Sakala for report.
+Bug: Issue #9 fixed, correct the filter dialog to not be showed in login 
+     page, when a sucessful login happen and expected redirection don't 
+     work (by browser configuration, extention blocking redirect etc). 
+     A html link was created to allow user to get in the WAF-FLE in this 
+     situation. Thanks to Stelio Plautz for report the issue.
+
+Version 0.6.0-RC2: Oct, 25 2012
+-------------
+Bug: Fixed an error that prevent to add a new sensor, by adding the 
+     missed "Use Client IP from header" to "Add New Sensor".
+
+Version 0.6.0-RC1: Oct, 24 2012
+-------------
+New Feature: mlog2waffle, daemon to push logs from modsecurity to 
+             WAF-FLE
+New Feature: add controller mlog2waffle aware with probe response
+New Feature: (issue #6) this release include a button to delete events 
+             selected by filter.
+New Feature: Is now possible to disable a sensor in management 
+             interface, blocking the event reception until it be enable 
+             again.
+New Feature: added support of modsecurity 2.7 Engine-Mode variable: 
+             enabled or detection_only
+New Feature: Add GeoIP support with Country Code and Autonomous System 
+             Number, and are filter enabled
+New Feature: A wizard was created to make sensor configuration more fast 
+             and simple, providing support to generate a sample config 
+             files make sensor use both: mlogc and mlog2waffle, in 
+             piped, service, and scheduled modes.
+New Feature: A setup script was created to help in new installation and 
+             version upgrade.
+New Feature: Events can be marked as false positive: event by event, a 
+             group of events, or can mark all events defined by a 
+             filter. You can filter (and exclude from filtering) events 
+             marked as false positive.
+New Feature: Dashboard now has new textual tables showing Top events 
+             grouped by: URI Path, Country Code and Autonomous Systems 
+             Number.
+New Feature: Dashboard pie chart for severity.
+New Feature: Dashboard are now able to use filter, charts and tables are 
+             clickable enabling the drill down data on dashboard.
+New Feature: Management 'Info' section added.
+New Feature: You can choose to compress full section to store in 
+             database (require PHP Zlib support), that save around 60% 
+             to storage full events
+New Feature: You can customize, per sensor, when ModSecurity is behind a 
+             reverse proxy with send a header that contain the client 
+             real ip address, ie. X-Forwarded-For, X-Real-IP.
+New Feature: Add support to filter by event TAG
+New Feature: Add support to new TAG defined automatically by events with 
+             new tags
+Improve: starting with this version, only PHP 5.3 and higher is 
+         supported
+Improve: Management interface for Users and Sensors with more 
+         information and better formatted.
+Improve: Filter is able to search for absolute and wildcard paths.
+Improve: Events list better formatted in a grid table.
+Improve: Delete sensor now use the same function of 'delete events on 
+         current filter' above, and avoid to block the database for long 
+         time.
+Improve: New, optimized database scheme to speed filters. That change 
+         require a database upgrade when migrate from version 0.5 to 
+         0.6:
+         - full section of events is now stored in a independent table
+         - Some columns were changed to better types and sizes
+Improve: Changed all database access to PDO, more clear and toward to 
+         database abstraction, resulting in only one database connection
+Improve: Add GPL warning in all files
+Improve: Now the default admin password need to be changed on first 
+         access
+Improve: Some web interface cleanup and rearrange
+Improve: Filter Dialog support now the negation of a parameter
+Improve: Many Tags has information as a tooltip and link for more 
+         information 
+Improve: "Phase H" "Message" duplicated are now excluded from database 
+         insert (but still preserved in raw event)
+Improve: "Phase H", support added to "Anomaly Score Exceeded" score 
+         value
+Improve: HTTP Status code, now following RFC values
+Improve: Events "Rules Alert" don't show duplicate entries sometimes 
+         catched by rules
+Improve: Add support to all stopwatch2 timers (available in modsecurity 
+         2.6.0+), and add then to filter to help in rules performance 
+         measurement (thanks Breno by idea)
+Improve: The sensor ip address can now be a network in CIDR format
+Bug: Limit "Phase C" to a max of 100 lines of 4096 bytes each
+Bug: "Phase H" "Message" parsing changed to make it is more robust
+Bug: "Phase H" better "Action" handling, better filter for "Action"
+Bug: "Phase H", adjusted "Apache-Error" regular expression
+Bug: Strip unnecessary new line from some fields when insert in database
+Bug: Fixed incorrect "events per sensor" query
+Bug: Fixed incorrect Filter by "Rule ID" in filter dialog
+Bug: Fixed user management form
+Bug: (issue #8) Fixed usage of short php tag in some files
+Bug: Force the php timezone to system timezone
+Bug: Force php display_errors to off to avoid disturb in http headers
+Bug: Change user information is now possible without change password
+Bug: Fixed the not accepting events when no rule set defined 
+     (modsecurity SecComponentSignature directive), thanks Hanafiah to 
+     help in find this.
+
+
+Version 0.5.1: Oct, 16 2011
+-------------
+Bug: Eventview navigation corrected
+Bug: Corrected parameters for filter in eventview.php corrected
+Bug: Input sanitized in logout page
+Bug: Wrong check of timezones before UTC (ie. +0200)
+Improve: source code cleaned up and well formatted
+
+Version 0.5: Oct, 07 2011
+-----------
+Initial release
