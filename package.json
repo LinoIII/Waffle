@@ -1,0 +1,21 @@
+{
+  "name": "waf-fle-master-vecchio",
+  "version": "1.0.0",
+  "description": "WAF-FLE - Readme ===================",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LinoIII/Waffle.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/LinoIII/Waffle/issues"
+  },
+  "homepage": "https://github.com/LinoIII/Waffle#readme"
+}
