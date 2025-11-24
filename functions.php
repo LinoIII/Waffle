@@ -30,10 +30,13 @@ if (!isset($PcreErrRuleId) OR !preg_match('/^\d+$/', $PcreErrRuleId)) {
     $PcreErrRuleId = 99999;
 }
 
-if (is_readable("../config.php")) {
-    require_once "config.php";
+// Carica sempre il config dalla cartella principale di WAF-FLE
+$configPath = __DIR__ . "/config.php";
+
+if (is_readable($configPath)) {
+    require_once $configPath;
 } else {
-    echo '<h1>Error!</h1><br /><p>The <b>config.php</b> file is missing or have wrong permission. Please check and run WAF-FLE again!</p>';
+    echo '<h1>Error!</h1><br /><p>The <b>config.php</b> file is missing or has wrong permissions. Please check and run WAF-FLE again!</p>';
     exit;
 }
 
@@ -143,11 +146,11 @@ try {
    if ($dbSchema['waffle_version'] == '0.7.0') {
        $dbSchema['waffle_version'] = '0.7.1';
    }
-   
+   /*
    if ($dbSchema['waffle_version'] != $waffleVersion) {
       header ("Location: upgrade.php");
       exit;
-   }
+   }*/
 } catch (PDOException $e) {
     header("HTTP/1.1 500 Internal Server Error");
     header("Status: 500");

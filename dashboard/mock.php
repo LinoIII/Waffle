@@ -1,16 +1,52 @@
 <?php
-// Titolo pagina per header.php
-$title = 'Dashboard';
+// Dashboard mock-only: non usa DB, solo dati finti
+$title = 'Dashboard (Mock)';
 require_once __DIR__ . '/../header.php';
 
-/*
- * Fallback: se il backend non popola ancora queste variabili
- * le inizializziamo noi in modo innocuo.
- */
-$totalEvents  = isset($totalEvents)  ? (int)$totalEvents  : 0;
-$userCount    = isset($userCount)    ? (int)$userCount    : 0;
-$recentEvents = isset($recentEvents) && is_array($recentEvents) ? $recentEvents : [];
+// Seed giornaliero per avere numeri stabili nella giornata
+mt_srand((int)date('Ymd'));
 
+// KPI finte
+$totalEvents = mt_rand(5000, 20000);
+$userCount   = mt_rand(5, 80);
+$recentCount = mt_rand(10, 40);
+
+// Generatori finti
+function mock_ip(){ return mt_rand(1,255).'.'.mt_rand(0,255).'.'.mt_rand(0,255).'.'.mt_rand(1,254); }
+function mock_host(){
+  $doms = ['example.com','corp.local','intra.net','svc.local','edge.net'];
+  $subs = ['api','app','www','gw','proxy','waf','auth','cdn'];
+  return $subs[array_rand($subs)].'.'.$doms[array_rand($doms)];
+}
+function mock_severity(){
+  $levels = ['info','low','medium','high','critical'];
+  return $levels[array_rand($levels)];
+}
+function mock_info(){
+  $msgs = [
+    'SQLi pattern detected',
+    'XSS attempt blocked',
+    'Bad user agent',
+    'Rate limit exceeded',
+    'Suspicious request',
+    'Known scanner signature',
+  ];
+  return $msgs[array_rand($msgs)];
+}
+
+$rows = [];
+$N = $recentCount;
+for($i=0; $i<$N; $i++){
+  $ts = time() - mt_rand(0, 72*3600); // ultime 72 ore
+  $rows[] = [
+    'id'       => mt_rand(1000, 9999),
+    'date'     => date('Y-m-d H:i:s', $ts),
+    'severity' => mock_severity(),
+    'ip'       => mock_ip(),
+    'host'     => mock_host(),
+    'info'     => mock_info(),
+  ];
+}
 if (!function_exists('severity_class')) {
     function severity_class(string $sev): string {
         $s = strtolower(trim($sev));
@@ -35,9 +71,6 @@ if (!function_exists('severity_class')) {
     }
 }
 
-
-// Per comodità UI: alias
-$rows = $recentEvents;
 ?>
 <section class="grid cols-3">
   <div class="card">
@@ -62,21 +95,18 @@ $rows = $recentEvents;
     <h2>Eventi recenti</h2>
     <div class="metric">
       <span class="value"><?= count($rows) ?></span>
-      <span class="tag">ultime query</span>
+      <span class="tag">ultime 72h (mock)</span>
     </div>
     <canvas data-mock></canvas>
   </div>
 </section>
 
 <section class="card" style="margin-top:16px">
-  <h2>Eventi recenti</h2>
-
-  <?php if(empty($rows)): ?>
-    <p class="alert">Nessun dato disponibile. Popola il database o usa il filtro.</p>
-  <?php else: ?>
+  <h2>Eventi recenti (mock)</h2>
 
   <div class="kpi">
     <span class="chip">Tot eventi: <?= count($rows) ?></span>
+    <span class="chip">Mock attivo</span>
   </div>
 
   <table class="table">
@@ -92,26 +122,26 @@ $rows = $recentEvents;
     <tbody>
       <?php foreach($rows as $event): ?>
         <tr>
-          <td><?= htmlspecialchars($event['id']        ?? '') ?></td>
-          <td><?= htmlspecialchars($event['date']      ?? '') ?></td>
+          <td><?= htmlspecialchars($event['id']) ?></td>
+          <td><?= htmlspecialchars($event['date']) ?></td>
           <td>
-  <span class="<?= severity_class($event['severity'] ?? '') ?>">
-    <?= htmlspecialchars($event['severity'] ?? '') ?>
+  <span class="<?= severity_class($event['severity']) ?>">
+    <?= htmlspecialchars($event['severity']) ?>
   </span>
 </td>
           <td>
-            <?= htmlspecialchars($event['ip']          ?? '') ?>
-            <?php if(!empty($event['host'])): ?>
-              <br><small class="muted"><?= htmlspecialchars($event['host']) ?></small>
-            <?php endif; ?>
+            <?= htmlspecialchars($event['ip']) ?><br>
+            <span class="muted"><?= htmlspecialchars($event['host']) ?></span>
           </td>
-          <td><?= htmlspecialchars($event['info']      ?? '') ?></td>
+          <td><?= htmlspecialchars($event['info']) ?></td>
         </tr>
       <?php endforeach; ?>
     </tbody>
   </table>
 
-  <?php endif; ?>
+  <p class="alert" style="margin-top:12px">
+    Questa pagina usa solo dati generati al volo, senza DB. Serve per testare il nuovo frontend.
+  </p>
 </section>
 
 <?php require_once __DIR__ . '/../footer.php'; ?>

@@ -19,6 +19,12 @@
 <?PHP
 require_once "../functions.php";
 
+// DEBUG LOCALE: mostra errori a schermo
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+
 global $DEBUG;
 if ($DEBUG) {
     $starttime_main = microtime(true);
@@ -82,56 +88,70 @@ if (isset($_POST['submit']) && $_POST['submit'] == "submit") {
 ?>
 
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-	<title>WAF-FLE</title>
-	<link rel="stylesheet" type="text/css" href="css/main.css" />  
-    <script>
-        $(document).ready(function(){ 
-            $('.auto-focus:first').focus();
-        }); 
-    </script>
-</head>
-<body>
-    <div id="header">
-    <div id="logo"> <a style="padding: 0;" href="./index.php"><img src="images/logo.png" width="126" height="60" border="0" alt="ModSecurity Dashboard"></a></div>
-    <div id="clear"> </div>
-    </div>
-
-	<div id="page-wrap">
-         <div id="login">
-            Please enter your authentication bellow
-<?PHP
-if (isset($emptyField) && $emptyField) {
-    print "<br /><font color=\"red\"><b>Fill both: username and password</b></font>";
-} elseif (isset($authFailed) && $authFailed) {
-    print "<br /><font color=\"red\"><b>Invalid Username or Password</b></font>";
-} elseif (isset($userExpired) && $userExpired) {
-    print "<br /><font color=\"red\"><b>User expired</b></font>";
-}
+<?php
+// Frontend login moderno
+$title = 'Login';
+$hideFilter = true; // nel caso footer/header la usino
+require_once "../header.php";
 ?>
-            <form action="login.php" method="POST">
-            <table>
-               <tr>
-               <th colspan="2">LOGIN</th>
-               </tr>
-               <tr>
-               <td>Username: </td><td><input type="text" name="user" autocomplete="off" class="auto-focus" autofocus></td></tr>
-               <tr>
-               <td>Password: </td><td><input type="password" name="pass" autocomplete="off"></td></tr>
-               <tr><td></td></tr>
-               <tr>
-               <td></td><td align="right">
-               <input type="hidden" name="ref" value="<?PHP print $_SERVER['HTTP_REFERER']; ?>">
-               <input type="submit" name="submit" value="submit"></td>
-               </tr>            
-            </table>
-            </form>
-		</div>	
-	</div>
-<?PHP
-$hideFilter = true;
+
+<div class="login-wrapper">
+  <section class="card login-card">
+    <h2 class="login-title">Accedi a WAF-FLE</h2>
+    <p class="login-subtitle">Inserisci le credenziali per continuare.</p>
+
+    <?php if (isset($emptyField) && $emptyField): ?>
+      <p class="alert alert-error">
+        Compila sia username che password.
+      </p>
+    <?php elseif (isset($authFailed) && $authFailed): ?>
+      <p class="alert alert-error">
+        Username o password non validi.
+      </p>
+    <?php elseif (isset($userExpired) && $userExpired): ?>
+      <p class="alert alert-error">
+        Utente scaduto.
+      </p>
+    <?php endif; ?>
+
+    <form action="login.php" method="POST" class="form-grid" autocomplete="off">
+      <div class="form-row">
+        <label for="user">Username</label>
+        <input
+          type="text"
+          id="user"
+          name="user"
+          autocomplete="off"
+          class="auto-focus"
+          autofocus
+        >
+      </div>
+
+      <div class="form-row">
+        <label for="pass">Password</label>
+        <input
+          type="password"
+          id="pass"
+          name="pass"
+          autocomplete="off"
+        >
+      </div>
+
+      <input
+        type="hidden"
+        name="ref"
+        value="<?php echo htmlspecialchars($_SERVER['HTTP_REFERER'] ?? ''); ?>"
+      >
+
+      <div class="form-actions" style="justify-content:flex-end;">
+        <button type="submit" name="submit" value="submit" class="btn">
+          Accedi
+        </button>
+      </div>
+    </form>
+  </section>
+</div>
+
+<?php
 require_once "../footer.php";
 ?>

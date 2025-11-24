@@ -3,8 +3,8 @@
  * Define the database parameters, cache and session timeout
  * 
 */
-$DB_HOST  = "localhost";
-$DB_USER  = "waffle_user";
+$DB_HOST  = "127.0.0.1";
+$DB_USER  = "waf-fle_user";
 $DB_PASS  = "waffle";
 $DATABASE = "waffle";
 
@@ -61,6 +61,6 @@ $DEBUG = false;
 // configure database schema. Upgrade of version and database can be 
 // available too.
 // While this is enable, no event is received or view.
-$SETUP = true;
+$SETUP = false;
 
 ?>
