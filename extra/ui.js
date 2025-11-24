@@ -1,47 +1,52 @@
 (function(){
   const body = document.body;
+  const toggleBtn = document.getElementById('themeToggle');
 
-  // Tema salvato nel cookie (solo dark/light)
-  const match = document.cookie.match(/(?:^|;\s*)theme=(theme-(dark|light))/);
-  const saved = match ? match[1] : 'theme-dark';
+  // Gestione Tema
+  if(toggleBtn){
+    toggleBtn.addEventListener('click', () => {
+      const current = body.getAttribute('data-theme');
+      const next = current === 'light' ? 'dark' : 'light';
+      
+      body.setAttribute('data-theme', next);
+      // Salva nel cookie per 1 anno così PHP lo legge al prossimo reload
+      document.cookie = `theme=${next};path=/;max-age=${60*60*24*365}`;
+    });
+  }
 
-  body.classList.remove('theme-dark','theme-light');
-  body.classList.add(saved);
-
-  // Toggle su dark <-> light
-  document.addEventListener('click', (e)=>{
-    const btn = e.target.closest('#themeToggle');
-    if(!btn) return;
-
-    const next = body.classList.contains('theme-dark') ? 'theme-light' : 'theme-dark';
-
-    body.classList.remove('theme-dark','theme-light');
-    body.classList.add(next);
-
-    // salva scelta
-    document.cookie = `theme=${next};path=/;max-age=${60*60*24*365}`;
-  });
-
-  // Grafico mock
-  function sparkline(canvas){
+  // Funzione mock per grafici sparkline (Solo visuale)
+  function drawSparkline(canvas){
     if(!canvas || !canvas.getContext) return;
     const ctx = canvas.getContext('2d');
     const w = canvas.width = canvas.clientWidth;
     const h = canvas.height = canvas.clientHeight;
-    const n = 32;
+    
+    // Configurazione linea
+    ctx.strokeStyle = getComputedStyle(body).getPropertyValue('--accent').trim() || '#3b82f6';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    for(let i=0;i<n;i++){
-      const x = i/(n-1)*w;
-      const y = h*0.2 + Math.abs(Math.sin(i*0.6))*h*0.6;
-      i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    
+    // Genera dati casuali ma coerenti
+    const points = 20;
+    for(let i=0; i<points; i++){
+      const x = (i / (points-1)) * w;
+      // Onda casuale
+      const noise = Math.random() * (h * 0.3);
+      const y = (h * 0.5) + (Math.sin(i) * (h * 0.2)) - (noise * 0.5);
+      
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
     }
     ctx.stroke();
+    
+    // Sfumatura sotto la linea
+    ctx.lineTo(w, h);
+    ctx.lineTo(0, h);
+    ctx.fillStyle = ctx.strokeStyle + '1a'; // 10% opacità
+    ctx.fill();
   }
 
   document.addEventListener('DOMContentLoaded', ()=>{
-    document.querySelectorAll('canvas[data-mock]').forEach(sparkline);
+    document.querySelectorAll('canvas[data-mock]').forEach(drawSparkline);
   });
 
 })();
-  

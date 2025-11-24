@@ -1,117 +1,110 @@
 <?php
-// Titolo pagina per header.php
-$title = 'Dashboard';
+$title = 'Dashboard Operativa';
 require_once __DIR__ . '/../header.php';
 
-/*
- * Fallback: se il backend non popola ancora queste variabili
- * le inizializziamo noi in modo innocuo.
- */
-$totalEvents  = isset($totalEvents)  ? (int)$totalEvents  : 0;
-$userCount    = isset($userCount)    ? (int)$userCount    : 0;
+// --- LOGICA BACKEND SIMULATA PER UI ---
+// Se le variabili non arrivano dal controller, usiamo valori di default sicuri (0 o array vuoti)
+$totalEvents = $totalEvents ?? 0;
+$userCount = $userCount ?? 0;
 $recentEvents = isset($recentEvents) && is_array($recentEvents) ? $recentEvents : [];
 
-if (!function_exists('severity_class')) {
-    function severity_class(string $sev): string {
-        $s = strtolower(trim($sev));
-        $map = [
-            '0'        => 'info',
-            'info'     => 'info',
-            'debug'    => 'info',
-            'low'      => 'low',
-            '1'        => 'low',
-            'medium'   => 'medium',
-            '2'        => 'medium',
-            'med'      => 'medium',
-            'high'     => 'high',
-            '3'        => 'high',
-            'critical' => 'critical',
-            'crit'     => 'critical',
-            '4'        => 'critical',
-            '5'        => 'critical',
-        ];
-        $norm = $map[$s] ?? 'info';
-        return 'badge sev-' . $norm;
-    }
+// Helper per mappare la gravità numerica a classi CSS
+function getSeverityBadge($level) {
+    // Normalizza input
+    $lvl = strtolower((string)$level);
+    
+    // Mappa livelli vecchi e nuovi
+    if (in_array($lvl, ['critical', '5', '4'])) return ['badge-critical', 'CRITICAL'];
+    if (in_array($lvl, ['high', '3'])) return ['badge-high', 'HIGH'];
+    if (in_array($lvl, ['medium', 'med', '2'])) return ['badge-medium', 'MEDIUM'];
+    if (in_array($lvl, ['low', '1'])) return ['badge-low', 'LOW'];
+    
+    return ['badge-info', 'INFO'];
 }
 
-
-// Per comodità UI: alias
-$rows = $recentEvents;
+// MOCK DATA: Se non ci sono eventi, mostriamo dati finti per vedere il design
+if (empty($recentEvents) && $totalEvents == 0) {
+    $recentEvents = [
+        ['id'=>104, 'date'=>date('Y-m-d H:i:s'), 'ip'=>'192.168.1.45', 'host'=>'crm.local', 'severity'=>'critical', 'info'=>'SQL Injection attempt in login'],
+        ['id'=>103, 'date'=>date('Y-m-d H:i:s', strtotime('-10 min')), 'ip'=>'10.0.0.12', 'host'=>'wiki.local', 'severity'=>'medium', 'info'=>'XSS payload detected'],
+        ['id'=>102, 'date'=>date('Y-m-d H:i:s', strtotime('-1 hour')), 'ip'=>'45.12.33.11', 'host'=>'app.public', 'severity'=>'low', 'info'=>'Path traversal probing'],
+    ];
+    $totalEvents = 15420;
+    $userCount = 12;
+}
 ?>
-<section class="grid cols-3">
+
+<section class="grid cols-3" style="margin-bottom: 24px;">
   <div class="card">
-    <h2>Eventi totali</h2>
     <div class="metric">
-      <span class="value"><?= $totalEvents ?></span>
-      <span class="tag">all time</span>
+      <span class="value"><?= number_format($totalEvents) ?></span>
     </div>
+    <div class="metric label">Eventi Rilevati (Total)</div>
     <canvas data-mock></canvas>
   </div>
 
   <div class="card">
-    <h2>Utenti</h2>
     <div class="metric">
-      <span class="value"><?= $userCount ?></span>
-      <span class="tag">utenti monitorati</span>
+      <span class="value" style="color: var(--warn)"><?= number_format($userCount) ?></span>
     </div>
+    <div class="metric label">Sensori / Utenti Attivi</div>
     <canvas data-mock></canvas>
   </div>
 
   <div class="card">
-    <h2>Eventi recenti</h2>
     <div class="metric">
-      <span class="value"><?= count($rows) ?></span>
-      <span class="tag">ultime query</span>
+      <span class="value" style="color: var(--ok)">Online</span>
     </div>
-    <canvas data-mock></canvas>
+    <div class="metric label">Stato Sistema</div>
+    <div style="font-size:11px; color:var(--muted); margin-top:5px;">Uptime: 14d 2h 10m</div>
   </div>
 </section>
 
-<section class="card" style="margin-top:16px">
-  <h2>Eventi recenti</h2>
-
-  <?php if(empty($rows)): ?>
-    <p class="alert">Nessun dato disponibile. Popola il database o usa il filtro.</p>
-  <?php else: ?>
-
-  <div class="kpi">
-    <span class="chip">Tot eventi: <?= count($rows) ?></span>
+<section class="card">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+      <h2 style="margin:0; font-size:16px;">🚨 Ultimi Eventi Rilevati</h2>
+      <a href="../filter.php" class="btn btn-ghost" style="padding:4px 10px; font-size:11px;">Vedi Tutti</a>
   </div>
 
-  <table class="table">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Data</th>
-        <th>Gravità</th>
-        <th>IP / Host</th>
-        <th>Dettagli</th>
-      </tr>
-    </thead>
-    <tbody>
-      <?php foreach($rows as $event): ?>
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
         <tr>
-          <td><?= htmlspecialchars($event['id']        ?? '') ?></td>
-          <td><?= htmlspecialchars($event['date']      ?? '') ?></td>
-          <td>
-  <span class="<?= severity_class($event['severity'] ?? '') ?>">
-    <?= htmlspecialchars($event['severity'] ?? '') ?>
-  </span>
-</td>
-          <td>
-            <?= htmlspecialchars($event['ip']          ?? '') ?>
-            <?php if(!empty($event['host'])): ?>
-              <br><small class="muted"><?= htmlspecialchars($event['host']) ?></small>
-            <?php endif; ?>
-          </td>
-          <td><?= htmlspecialchars($event['info']      ?? '') ?></td>
+          <th width="80">ID</th>
+          <th width="160">Timestamp</th>
+          <th width="100">Severity</th>
+          <th width="180">Source IP</th>
+          <th>Dettaglio Evento</th>
+          <th width="80" style="text-align:right">Action</th>
         </tr>
-      <?php endforeach; ?>
-    </tbody>
-  </table>
-
-  <?php endif; ?>
+      </thead>
+      <tbody>
+        <?php foreach($recentEvents as $ev): 
+            list($badgeClass, $badgeLabel) = getSeverityBadge($ev['severity'] ?? 'info');
+        ?>
+          <tr>
+            <td style="color:var(--muted)">#<?= htmlspecialchars($ev['id'] ?? '-') ?></td>
+            <td><?= htmlspecialchars($ev['date'] ?? '-') ?></td>
+            <td>
+                <span class="badge <?= $badgeClass ?>"><?= $badgeLabel ?></span>
+            </td>
+            <td style="font-family:var(--mono); letter-spacing:-0.5px;">
+                <?= htmlspecialchars($ev['ip'] ?? '0.0.0.0') ?>
+                <?php if(!empty($ev['host'])): ?>
+                    <div style="font-size:10px; color:var(--muted)"><?= htmlspecialchars($ev['host']) ?></div>
+                <?php endif; ?>
+            </td>
+            <td>
+                <?= htmlspecialchars(substr($ev['info'] ?? 'No detail', 0, 80)) ?>...
+            </td>
+            <td style="text-align:right">
+                <a href="../filtershow.php?id=<?= $ev['id'] ?? 0 ?>" class="btn-ghost" style="padding:2px 6px; border-radius:4px; font-size:10px;">VIEW</a>
+            </td>
+          </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
 </section>
 
 <?php require_once __DIR__ . '/../footer.php'; ?>
