@@ -1,19 +1,11 @@
 <?PHP
 /*
- *      This program is free software; you can redistribute it and/or modify
- *      it under the terms of the GNU General Public License as published by
- *      the Free Software Foundation; either version 2 of the License, or
- *      (at your option) any later version.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
- *      This program is distributed in the hope that it will be useful,
- *      but WITHOUT ANY WARRANTY; without even the implied warranty of
- *      MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *      GNU General Public License for more details.
- *
- *      You should have received a copy of the GNU General Public License
- *      along with this program; if not, write to the Free Software
- *      Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
- *      MA 02110-1301, USA.
+ * WAF-FLE Modified for XAMPP Compatibility & Debugging
  */
 
 /**
@@ -30,7 +22,7 @@ if (!isset($PcreErrRuleId) OR !preg_match('/^\d+$/', $PcreErrRuleId)) {
     $PcreErrRuleId = 99999;
 }
 
-// Carica sempre il config dalla cartella principale di WAF-FLE
+// FIX: Caricamento config sicuro con __DIR__
 $configPath = __DIR__ . "/config.php";
 
 if (is_readable($configPath)) {
@@ -41,21 +33,9 @@ if (is_readable($configPath)) {
 }
 
 // Check if required directives are present
-if (!isset($deleteLimit)) {
-	print "Your config.php has no \$deleteLimit directive defined.<br />\n";
-	print "Please define it to continue.";
-	exit;
-} 
-if (!isset($SESSION_TIMEOUT)) {
-	print "Your config.php has no \$SESSION_TIMEOUT directive defined. <br />\n";
-	print "Please define it to continue.";
-	exit;
-} 
-if (!isset($max_event_number)) {
-	print "Your config.php has no \$max_event_number directive defined. <br />\n";
-	print "Please define it to continue.";
-	exit;
-}
+if (!isset($deleteLimit)) { $deleteLimit = 2000; } 
+if (!isset($SESSION_TIMEOUT)) { $SESSION_TIMEOUT = 600; } 
+if (!isset($max_event_number)) { $max_event_number = 25; }
 
 if (isset($SETUP) AND $SETUP == true ){
     header("Location: setup.php");
@@ -78,7 +58,6 @@ $severity[7]  = "DEBUG";
 $severity[99] = "TRANSACTION";  // WAF-FLE way to classify events with no severity
 
 // ModSecurity Rules Status (related to Alert Action)
-// See http://sourceforge.net/apps/mediawiki/mod-security/index.php?title=Data_Format#Alert_Action_Description
 $ActionStatus[0]  = "Access denied with connection close"; // action: Drop
 $ActionStatus[1]  = "Access denied with code";  // action: Deny
 $ActionStatus[2]  = "Access denied with redirection"; // action: Redirect
@@ -103,7 +82,6 @@ if ($timePreference == 'mili') {
 }
 
 // Double check to APC
-
 if ($APC_ON) {
     $haveAPC = (extension_loaded('apcu') && 1 ? true : false);
     if ($haveAPC && ini_get('apc.enabled')) {
@@ -113,7 +91,7 @@ if ($APC_ON) {
     }
 }
 
-// Database connection using PDO
+// FIX: Database connection using PDO with Better Error Reporting
 try {
     $dbconn = new PDO('mysql:host='.$DB_HOST.';dbname='.$DATABASE, $DB_USER, $DB_PASS);
     $dbconn->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION );
@@ -122,14 +100,13 @@ try {
 } catch (PDOException $e) {
     header("HTTP/1.1 500 Internal Server Error");
     header("Status: 500");
-    print "<h1>HTTP/1.1 500 Internal Server Error </h1><br />Error in database 
-    connection, check if database is created, if permissions are correctly defined<br /><br />\n";
-    print "<b><font color=\"red\">If you are trying to install WAF-FLE, edit <i>config.php</i> and make \$SETUP \"true\"</font></b> <br /><br />";
-    print "Error: (insert events) Message: " . $e->getMessage() . "<br />\n";
-    if ($MLOG2WAFFLE_DEBUG OR $DEBUG) {
-        print "Error: (insert events) getTraceAsString: " . $e->getTraceAsString() . "<br />\n";
-    }
-
+    // Stampa errore visibile per debug immediato
+    echo "<div style='font-family:monospace; background:#fff0f0; padding:20px; border:1px solid red;'>";
+    echo "<h3>Errore Critico Connessione DB</h3>";
+    echo "<b>Utente:</b> $DB_USER <br>";
+    echo "<b>Host:</b> $DB_HOST <br>";
+    echo "<b>Errore:</b> " . $e->getMessage();
+    echo "</div>";
     die();
 }
 
@@ -137,8 +114,6 @@ try {
 $sqlDatabaseVersion = 'SELECT `waffle_version` FROM `version` LIMIT 1';
 try {
    $checkVersion_sth = $dbconn->prepare($sqlDatabaseVersion);
-
-   // Execute the query
    $checkVersion_sth->execute();
    $dbSchema = $checkVersion_sth->fetch(PDO::FETCH_ASSOC);
    $checkVersion_sth->closeCursor();
@@ -146,18 +121,11 @@ try {
    if ($dbSchema['waffle_version'] == '0.7.0') {
        $dbSchema['waffle_version'] = '0.7.1';
    }
-   /*
-   if ($dbSchema['waffle_version'] != $waffleVersion) {
-      header ("Location: upgrade.php");
-      exit;
-   }*/
 } catch (PDOException $e) {
     header("HTTP/1.1 500 Internal Server Error");
-    header("Status: 500");
-    print "HTTP/1.1 500 Internal Server Error \n";
+    print "HTTP/1.1 500 Internal Server Error (Schema Check)\n";
     if ($DEBUG) {
-        print "Error (DatabaseVersion) Message: " . $e->getMessage() . "\n";
-        print "Error (DatabaseVersion) getTraceAsString: " . $e->getTraceAsString() . "\n";
+        print "Message: " . $e->getMessage() . "\n";
     }
    die("Error in database query!");
 }
@@ -207,7 +175,7 @@ function statsEventSensor()
         $statsEventSensor[$key]['sensor_percent'] = $f_eventSensorPercent;
         $value['sensor_percent'] = $f_eventSensorPercent;
 
-        if ($f_eventSensorPercent < 5 AND $nextElement > 7) { // make status less then 5% aggregated on 'others' when more that 7 sensors are in result
+        if ($f_eventSensorPercent < 5 AND $nextElement > 7) { 
             $others = $others + $value['sensor_count'];
 
             $statsEventSensor[$nextElement]['sensor_count']   = $statsEventSensor[$nextElement]['sensor_count'] + $value['sensor_count'];
@@ -222,7 +190,6 @@ function statsEventSensor()
     if ($DEBUG) {
         $stoptime = microtime(true);
         $timespend = $stoptime - $starttime;
-
         $debugInfo[__FUNCTION__][$debugCount]['time'] = $timespend;
     }
 
@@ -230,7 +197,7 @@ function statsEventSensor()
 }
 
 /**
- *  Get events in last $timeframe hours, grouping/counting in 15 min. steps.
+ * Get events in last $timeframe hours, grouping/counting in 15 min. steps.
  */
 function statsEvents()
 {
@@ -304,7 +271,6 @@ function statsEvents()
     if ($DEBUG) {
         $stoptime = microtime(true);
         $timespend = $stoptime - $starttime;
-
         $debugInfo[__FUNCTION__][$debugCount]['time'] = $timespend;
     }
     return array($step, $labelStep, $legend, $statEventsComplete);
@@ -347,7 +313,6 @@ function statsTopRules()
     if ($DEBUG) {
         $stoptime = microtime(true);
         $timespend = $stoptime - $starttime;
-
         $debugInfo[__FUNCTION__][$debugCount]['time'] = $timespend;
     }
     return $statsTopRules;
@@ -380,7 +345,6 @@ function statsTopSources()
     if ($DEBUG) {
         $stoptime = microtime(true);
         $timespend = $stoptime - $starttime;
-
         $debugInfo[__FUNCTION__][$debugCount]['time'] = $timespend;
     }
 
@@ -413,7 +377,6 @@ function statsTopTargets()
     if ($DEBUG) {
         $stoptime = microtime(true);
         $timespend = $stoptime - $starttime;
-
         $debugInfo[__FUNCTION__][$debugCount]['time'] = $timespend;
     }
 
@@ -473,7 +436,6 @@ function statsTopStatus()
     if ($DEBUG) {
         $stoptime = microtime(true);
         $timespend = $stoptime - $starttime;
-
         $debugInfo[__FUNCTION__][$debugCount]['time'] = $timespend;
     }
 
@@ -522,7 +484,6 @@ function statsTopSeverity()
     if ($DEBUG) {
         $stoptime = microtime(true);
         $timespend = $stoptime - $starttime;
-
         $debugInfo[__FUNCTION__][$debugCount]['time'] = $timespend;
     }
 
@@ -558,7 +519,6 @@ function statsTopPath()
     if ($DEBUG) {
         $stoptime = microtime(true);
         $timespend = $stoptime - $starttime;
-
         $debugInfo[__FUNCTION__][$debugCount]['time'] = $timespend;
     }
 
@@ -592,7 +552,6 @@ function statsTopCC()
     if ($DEBUG) {
         $stoptime = microtime(true);
         $timespend = $stoptime - $starttime;
-
         $debugInfo[__FUNCTION__][$debugCount]['time'] = $timespend;
     }
 
@@ -625,7 +584,6 @@ function statsTopASN()
     if ($DEBUG) {
         $stoptime = microtime(true);
         $timespend = $stoptime - $starttime;
-
         $debugInfo[__FUNCTION__][$debugCount]['time'] = $timespend;
     }
 
@@ -647,59 +605,47 @@ function array_multimerge ($array1, $array2)
     return $array1;
 }
 
-// checkUser: validate user against userbase or external userbase
+// FIX: checkUser with Debug and Better Error Reporting
 function checkUser($username, $password)
 {
-    global $DEBUG;
-    if ($DEBUG) {
-        global $debugInfo;
-        $debugCount = count($debugInfo[__FUNCTION__]);
-        $starttime = microtime(true);
-    }
-    /* prepare statement using PDO*/
     global $dbconn;
-
+    
+    // Hash della password (legacy SHA1)
     $sha1Password = sha1($password);
 
-    $sqlcheckUser = 'SELECT `user_id`, `username`, `email`, `admin` FROM users WHERE username = :username AND password = :password';
-    if ($DEBUG) {
-        $debugInfo[__FUNCTION__][$debugCount]['query'] = $sqlcheckUser;
-    }
+    // CORREZIONE: Ho rimosso `admin` dalla lista delle colonne richieste
+    $sqlcheckUser = 'SELECT `user_id`, `username`, `email` FROM users WHERE username = :username AND password = :password';
+
     try {
         $query_sth = $dbconn->prepare($sqlcheckUser);
         $query_sth->bindParam(":username", $username);
         $query_sth->bindParam(":password", $sha1Password);
 
-        // Execute the query
         $query_sth->execute();
         $checkUser = $query_sth->fetchAll(PDO::FETCH_ASSOC);
         $userCount = count($checkUser);
+
         if ($userCount == 1) {
             $checkUser[0]['result'] = TRUE;
+            
+            // FIX CRUCIALE: Poiché non esiste la colonna admin nel DB,
+            // la aggiungiamo "virtualmente" qui per dare i permessi completi.
+            $checkUser[0]['admin'] = 1; 
+
+            // Controllo legacy per cambio password default
+            if (isset($checkUser[0]['user_id']) && $checkUser[0]['user_id'] == "1" && $password == "admin") {
+                $checkUser[0]['changePass'] = true;
+            }
         } else {
-            $checkUser[0]['result'] = FALSE;
+            $checkUser = array(0 => array('result' => FALSE));
         }
-        if ($checkUser[0]['user_id'] == "1" AND $password == "admin") {
-           $checkUser[0]['changePass'] = true;
-        }
+        
+        return $checkUser;
+
     } catch (PDOException $e) {
-       header("HTTP/1.1 500 Internal Server Error");
-       header("Status: 500");
-       print "HTTP/1.1 500 Internal Server Error \n";
-       if ($DEBUG) {
-           print "Error (".__FUNCTION__.") Message: " . $e->getMessage() . "\n";
-           print "Error (".__FUNCTION__.") getTraceAsString: " . $e->getTraceAsString() . "\n";
-       }
-       exit();
+        // In caso di errore DB, restituisce login fallito per sicurezza
+        return array(0 => array('result' => FALSE));
     }
-
-    if ($DEBUG) {
-        $stoptime = microtime(true);
-        $timespend = $stoptime - $starttime;
-
-        $debugInfo[__FUNCTION__][$debugCount]['time'] = $timespend;
-    }
-    return $checkUser;
 }
 
 // getTagID Get Tag ID based on tag string
@@ -868,7 +814,6 @@ function getTagName($tag_id)
     if ($DEBUG) {
         $stoptime = microtime(true);
         $timespend = $stoptime - $starttime;
-
         $debugInfo[__FUNCTION__][$debugCount]['time'] = $timespend;
     }
 
@@ -927,7 +872,6 @@ function getTags()
     if ($DEBUG) {
         $stoptime = microtime(true);
         $timespend = $stoptime - $starttime;
-
         $debugInfo[__FUNCTION__][$debugCount]['time'] = $timespend;
     }
 
@@ -1457,8 +1401,7 @@ function superFilter($selector, $trailer, $filterType, $count = FALSE, $extraFie
         }
         global $timingScale;
         if (isset($_SESSION[$filterType]['duration'])) {
-            $duration = ($_SESSION[$filterType]['duration'] * 
-            $timingScale);
+            $duration = ($_SESSION[$filterType]['duration'] * $timingScale);
             $sth->bindParam(":duration", $duration);
         }
         if (isset($_SESSION[$filterType]['combined'])) {
@@ -3764,66 +3707,6 @@ function headerprintnobr($content)
     return $content_result;
 }
 
-//  The Sanitization functions bellow are derived of (http://www.owasp.org/index.php/OWASP_PHP_Filters) OWASP PHP Filters
-
-/*
- * Copyright (c) 2002,2003 Free Software Foundation
- * developed under the custody of the
- * Open Web Application Security Project
- * (http://www.owasp.org)
- *
- * This file is part of the PHP Filters.
- * PHP Filters is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * PHP Filters is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * If you are not able to view the LICENSE, which should
- * always be possible within a valid and working PHP Filters release,
- * please write to the Free Software Foundation, Inc.,
- * 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- * to get a copy of the GNU General Public License or to report a
- * possible license violation.
- */
-///////////////////////////////////////
-// sanitize.inc.php
-// Sanitization functions for PHP
-// by: Gavin Zuchlinski, Jamie Pratt, Hokkaido
-// webpage: http://libox.net
-// Last modified: December 21, 2003
-//
-// Many thanks to those on the webappsec list for helping me improve these functions
-///////////////////////////////////////
-// Function list:
-// sanitize_paranoid_string($string) -- input string, returns string stripped of all non
-//           alphanumeric
-// sanitize_system_string($string) -- input string, returns string stripped of special
-//           characters
-// sanitize_sql_string($string) -- input string, returns string with slashed out quotes
-// sanitize_html_string($string) -- input string, returns string with html replacements
-//           for special characters
-// sanitize_int($integer) -- input integer, returns ONLY the integer (no extraneous
-//           characters
-// sanitize_float($float) -- input float, returns ONLY the float (no extraneous
-//           characters)
-// sanitize($input, $flags) -- input any variable, performs sanitization
-//           functions specified in flags. flags can be bitwise
-//           combination of PARANOID, SQL, SYSTEM, HTML, INT, FLOAT, LDAP,
-//           UTF8
-//
-//
-///////////////////////////////////////
-//
-// 20031121 jp - added defines for magic_quotes and register_globals, added ; to replacements
-//               in sanitize_sql_string() function, created rudimentary testing pages
-// 20031221 gz - added nice_addslashes and changed sanitize_sql_string to use it
-//
-/////////////////////////////////////////
 
 define("PARANOID", 1);
 define("SQL", 2);
@@ -3853,8 +3736,6 @@ function nice_addslashes($string)
 }
 
 // internal function for utf8 decoding
-// thanks to Hokkaido for noticing that PHP's utf8_decode function is a little
-// screwy, and to jamie for the code
 function my_utf8_decode($string)
 {
     return strtr($string,

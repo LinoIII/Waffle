@@ -4,9 +4,9 @@
  * 
 */
 $DB_HOST  = "127.0.0.1";
-$DB_USER  = "waf-fle_user";
-$DB_PASS  = "waffle";
-$DATABASE = "waffle";
+$DB_USER  = "root";
+$DB_PASS  = "";
+$DATABASE = "waf-fle";
 
 // To enable full events compression in database use 'TRUE', to disable 
 // compression use 'FALSE'

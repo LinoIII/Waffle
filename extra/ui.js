@@ -1,52 +1,46 @@
-(function(){
-  const body = document.body;
-  const toggleBtn = document.getElementById('themeToggle');
+document.addEventListener('DOMContentLoaded', () => {
+    const toggleBtn = document.getElementById('themeToggle');
+    const body = document.body;
 
-  // Gestione Tema
-  if(toggleBtn){
-    toggleBtn.addEventListener('click', () => {
-      const current = body.getAttribute('data-theme');
-      const next = current === 'light' ? 'dark' : 'light';
-      
-      body.setAttribute('data-theme', next);
-      // Salva nel cookie per 1 anno così PHP lo legge al prossimo reload
-      document.cookie = `theme=${next};path=/;max-age=${60*60*24*365}`;
-    });
-  }
+    // 1. Applica tema salvato all'avvio
+    const currentTheme = localStorage.getItem('theme') || 'dark';
+    body.setAttribute('data-theme', currentTheme);
 
-  // Funzione mock per grafici sparkline (Solo visuale)
-  function drawSparkline(canvas){
-    if(!canvas || !canvas.getContext) return;
-    const ctx = canvas.getContext('2d');
-    const w = canvas.width = canvas.clientWidth;
-    const h = canvas.height = canvas.clientHeight;
-    
-    // Configurazione linea
-    ctx.strokeStyle = getComputedStyle(body).getPropertyValue('--accent').trim() || '#3b82f6';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    
-    // Genera dati casuali ma coerenti
-    const points = 20;
-    for(let i=0; i<points; i++){
-      const x = (i / (points-1)) * w;
-      // Onda casuale
-      const noise = Math.random() * (h * 0.3);
-      const y = (h * 0.5) + (Math.sin(i) * (h * 0.2)) - (noise * 0.5);
-      
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    // 2. Gestione Click
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+            const oldTheme = body.getAttribute('data-theme');
+            const newTheme = oldTheme === 'light' ? 'dark' : 'light';
+
+            // Applica
+            body.setAttribute('data-theme', newTheme);
+            
+            // Salva
+            localStorage.setItem('theme', newTheme);
+            // Salva anche cookie per PHP (opzionale ma utile)
+            document.cookie = `theme=${newTheme};path=/;max-age=31536000`;
+        });
     }
-    ctx.stroke();
-    
-    // Sfumatura sotto la linea
-    ctx.lineTo(w, h);
-    ctx.lineTo(0, h);
-    ctx.fillStyle = ctx.strokeStyle + '1a'; // 10% opacità
-    ctx.fill();
-  }
 
-  document.addEventListener('DOMContentLoaded', ()=>{
-    document.querySelectorAll('canvas[data-mock]').forEach(drawSparkline);
-  });
+    // 3. Sparklines (Grafici finti per estetica)
+    document.querySelectorAll('canvas[data-mock]').forEach(canvas => {
+        const ctx = canvas.getContext('2d');
+        const w = canvas.width = canvas.clientWidth;
+        const h = canvas.height = canvas.clientHeight;
+        
+        // Colore linea basato sul CSS
+        const style = getComputedStyle(document.body);
+        const color = style.getPropertyValue('--primary').trim() || '#3b82f6';
 
-})();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        
+        // Disegna onda casuale
+        for(let i=0; i<w; i+=5) {
+            const y = (h/2) + Math.sin(i * 0.05) * (h * 0.3) + (Math.random() * 5);
+            i===0 ? ctx.moveTo(i,y) : ctx.lineTo(i,y);
+        }
+        ctx.stroke();
+    });
+});
